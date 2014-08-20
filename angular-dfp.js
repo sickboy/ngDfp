@@ -54,7 +54,18 @@ angular.module('ngDfp', [])
      */
     this._initialize = function () {
       angular.forEach(slots, function (slot, id) {
-        definedSlots[id] = googletag.defineSlot.apply(null, slot).addService(googletag.pubads());
+          var mapping = googletag.sizeMapping();
+          var sizes = [];
+          var size = slot.getSize();
+          for (var k in size) {
+            mapping = mapping.addSize(size[k][0], size[k][1]);
+            for (var s in size[k][1]) {
+              sizes.push(size[k][1][s]); // TODO: Distinct
+            }
+          }
+          var slot = googletag.defineSlot.apply(null, [slot[0], sizes, slot[2]]).addService(googletag.pubads());
+          slot.defineSizeMapping(mapping.build());
+          definedSlots[id] = slot;
       });
 
       googletag.pubads().enableSingleRequest();
@@ -220,7 +231,7 @@ angular.module('ngDfp', [])
           DoubleClick.getSlot(id).then(function (slot) {
             var size = slot.getSize();
 
-            element.css('width', size[0]).css('height', size[1]);
+            //element.css('width', size[0]).css('height', size[1]);
             $timeout(function () {
               DoubleClick.runAd(id);
             });
