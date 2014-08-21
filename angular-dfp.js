@@ -54,17 +54,22 @@ angular.module('ngDfp', [])
      */
     this._initialize = function () {
       angular.forEach(slots, function (slot, id) {
+      	  googletag.sbNgTags = googletag.sbNgTags || [];
           var mapping = googletag.sizeMapping();
           var sizes = [];
+          var resolutions = [];
           var size = slot.getSize();
           for (var k in size) {
             mapping = mapping.addSize(size[k][0], size[k][1]);
+            resolutions.push(size[k][0]);
             for (var s in size[k][1]) {
               sizes.push(size[k][1][s]); // TODO: Distinct
             }
           }
           var slot = googletag.defineSlot.apply(null, [slot[0], sizes, slot[2]]).addService(googletag.pubads());
           slot.defineSizeMapping(mapping.build());
+
+          googletag.sbNgTags.push([slot, resolutions]);
           definedSlots[id] = slot;
       });
 
