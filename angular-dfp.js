@@ -17,7 +17,7 @@ angular.module('ngDfp', [])
      */
     var definedSlots = {};
 
-    /** 
+    /**
      If configured, all ads will be refreshed at the same interval
      */
     var refreshInterval = null;
@@ -36,7 +36,7 @@ angular.module('ngDfp', [])
       gads.async = true;
       gads.type  = 'text/javascript';
       gads.src   = (useSSL ? 'https:' : 'http:') + ngDfpUrl;
-      
+
       // Insert before any JS include.
       node.parentNode.insertBefore(gads, node);
 
@@ -53,35 +53,35 @@ angular.module('ngDfp', [])
      Initializes and configures the slots that were added with defineSlot.
      */
     this._initialize = function () {
+      googletag.sbNgTags = googletag.sbNgTags || [];
       angular.forEach(slots, function (slot, id) {
-      	  googletag.sbNgTags = googletag.sbNgTags || [];
           var mapping = googletag.sizeMapping();
           var sizes = [];
-          var resolutions = [];
           var size = slot.getSize();
+          var resolutions = [];
           for (var k in size) {
-            mapping = mapping.addSize(size[k][0], size[k][1]);
             resolutions.push(size[k][0]);
+            mapping = mapping.addSize(size[k][0], size[k][1]);
             for (var s in size[k][1]) {
               sizes.push(size[k][1][s]); // TODO: Distinct
             }
           }
           var slot = googletag.defineSlot.apply(null, [slot[0], sizes, slot[2]]).addService(googletag.pubads());
           slot.defineSizeMapping(mapping.build());
-
-          googletag.sbNgTags.push([slot, resolutions]);
+          if (slot[3])
+            slot.set('adsense_channel_ids', slot[3]);
           definedSlots[id] = slot;
+          googletag.sbNgTags.push([slot, resolutions]);
       });
 
       googletag.pubads().enableSingleRequest();
       googletag.enableServices();
-
       googletag.pubads().addEventListener('slotRenderEnded', this._slotRenderEnded);
     };
 
     this._slotRenderEnded = function (event) {
       var callback = slots[event.slot.getSlotId().getDomId()].renderCallback;
-      
+
       if (typeof callback === 'function') {
         callback();
       }
@@ -141,11 +141,11 @@ angular.module('ngDfp', [])
 
         deferred.resolve();
       });
-      
+
       return {
         /**
-         More than just getting the ad size, this 
-         allows us to wait for the JS file to finish downloading and 
+         More than just getting the ad size, this
+         allows us to wait for the JS file to finish downloading and
          configuring ads
 
          @deprecated Use getSlot().getSize() instead.
