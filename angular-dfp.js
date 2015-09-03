@@ -49,11 +49,26 @@ angular.module('ngDfp', [])
       gads.onload = callback;
     };
 
+    var s  = this;
+
     /**
      Initializes and configures the slots that were added with defineSlot.
      */
-    this._initialize = function () {
+    this._initialize = function (deferred) {
+      var googletag = googletag || {};
+      googletag.cmd = googletag.cmd || [];
       googletag.sbNgTags = googletag.sbNgTags || [];
+      if (window.googleDfpPreloaded) {
+        s._initializeAds(deferred);
+      } else {
+        // this doesnt actually work??
+        googletag.cmd.push(function() {
+          s._initializeAds(deferred);
+        });
+      };
+    };
+
+    this._initializeAds = function(deferred) {
       angular.forEach(slots, function (slot, id) {
           var mapping = googletag.sizeMapping();
           var sizes = [];
@@ -77,7 +92,9 @@ angular.module('ngDfp', [])
       googletag.pubads().enableSingleRequest();
       googletag.enableServices();
       googletag.pubads().addEventListener('slotRenderEnded', this._slotRenderEnded);
-    };
+
+      deferred.resolve();
+    }
 
     this._slotRenderEnded = function (event) {
       var callback = slots[event.slot.getSlotId().getDomId()].renderCallback;
@@ -127,20 +144,29 @@ angular.module('ngDfp', [])
     // Public factory API.
     var self  = this;
     this.$get = ['$q', '$window', '$interval', function ($q, $window, $interval) {
-      // Neat trick from github.com/mllrsohn/angular-re-captcha
       var deferred = $q.defer();
+      // Neat trick from github.com/mllrsohn/angular-re-captcha
 
-      self._createTag(function () {
-        self._initialize();
+      if (Object.keys(slots).length === 0) {
+        // Don't initialize when no slots set..
+      } else {
 
+      deferred.promise.then(function() {
         if (self._refreshInterval() !== null) {
           $interval(function () {
             $window.googletag.pubads().refresh();
           }, self._refreshInterval());
         }
-
-        deferred.resolve();
       });
+
+      if ($window.googleDfpPreloaded) {
+        self._initialize(deferred);
+      } else {
+        self._createTag(function () {
+          self._initialize(deferred);
+        });
+      }
+    }
 
       return {
         /**
