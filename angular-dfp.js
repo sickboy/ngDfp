@@ -55,20 +55,17 @@ angular.module('ngDfp', [])
      Initializes and configures the slots that were added with defineSlot.
      */
     this._initialize = function (deferred) {
-      var googletag = googletag || {};
-      googletag.cmd = googletag.cmd || [];
-      googletag.sbNgTags = googletag.sbNgTags || [];
-      if (window.googleDfpPreloaded) {
-        s._initializeAds(deferred);
-      } else {
-        // this doesnt actually work??
-        googletag.cmd.push(function() {
+      googletag.cmd.push(function() {
+        try {
           s._initializeAds(deferred);
-        });
-      };
+        } catch (err) {
+          throw err;
+        }
+      });
     };
 
     this._initializeAds = function(deferred) {
+      googletag.sbNgTags = googletag.sbNgTags || [];
       angular.forEach(slots, function (slot, id) {
           var mapping = googletag.sizeMapping();
           var sizes = [];
@@ -91,7 +88,7 @@ angular.module('ngDfp', [])
 
       googletag.pubads().enableSingleRequest();
       googletag.enableServices();
-      googletag.pubads().addEventListener('slotRenderEnded', this._slotRenderEnded);
+      googletag.pubads().addEventListener('slotRenderEnded', s._slotRenderEnded);
 
       deferred.resolve();
     }
@@ -147,26 +144,26 @@ angular.module('ngDfp', [])
       var deferred = $q.defer();
       // Neat trick from github.com/mllrsohn/angular-re-captcha
 
-      if (Object.keys(slots).length === 0) {
-        // Don't initialize when no slots set..
-      } else {
-
-      deferred.promise.then(function() {
-        if (self._refreshInterval() !== null) {
-          $interval(function () {
-            $window.googletag.pubads().refresh();
-          }, self._refreshInterval());
-        }
-      });
-
-      if ($window.googleDfpPreloaded) {
-        self._initialize(deferred);
-      } else {
-        self._createTag(function () {
-          self._initialize(deferred);
+      // Don't initialize when no slots set..
+      if (Object.keys(slots).length > 0) {
+        deferred.promise.then(function() {
+          if (self._refreshInterval() !== null) {
+            $interval(function () {
+              $window.googletag.pubads().refresh();
+            }, self._refreshInterval());
+          }
         });
+
+        var googletag = googletag || {};
+        googletag.cmd = googletag.cmd || [];
+        if ($window.googleDfpPreloaded) {
+          self._initialize(deferred);
+        } else {
+          self._createTag(function () {
+            self._initialize(deferred);
+          });
+        }
       }
-    }
 
       return {
         /**
